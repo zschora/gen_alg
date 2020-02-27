@@ -9,7 +9,7 @@
 #include <cmath>
 #include <ctime>
 #include <thread>
-#define ll unsigned long long
+#define ll uint64_t
 //1 1 1 1 3 2 2 1 1 1 1 1 1 1 3 2 2 1 1 1 1 1 1 1 3 2 2 1 1 1 1 1 1 1 3 2 2 1 1 1
 //srand 1205, n = rand() % 1000, int pool_len = 5000; int generations = 35;
 // 123 sec non-par, 83 sec - par
@@ -32,7 +32,7 @@ void print_pool(vector<vector<int>> &pool, int pool_len) {
 	}
 }
 
-void get_individual(vector<int> &ind) {
+void get_individual(vector<int> &ind) { //рандомное решение
 	for (int i = 0; i < n; i++)
 	{
 		ind[i] = rand() % k;
@@ -58,7 +58,7 @@ void pool_mutation(vector<vector<int>> &pool, int pool_len) {
 	}
 }
 
-void cross(vector<int> &m1, vector<int> &m2, vector<int> &son) {
+void cross(vector<int> &m1, vector<int> &m2, vector<int> &son) { //скрещ. двух решений
 	for (int i = 0; i < n / 2; i++)
 	{
 		son[i] = m1[i];
@@ -69,7 +69,7 @@ void cross(vector<int> &m1, vector<int> &m2, vector<int> &son) {
 	}
 }
 
-bool comp(const vector<int> &m1, const vector<int> &m2) { //не работает для к
+bool comp(const vector<int> &m1, const vector<int> &m2) { //только для двух подмн-ств
 	int val1 = 0, val2 = 0, sum = 0;
 	for (int i = 0; i < n; i++)
 	{
@@ -89,7 +89,7 @@ void get_new_generation(vector<vector<int>> &pool, int pool_len) {
 	}
 }
 
-void f(vector<pair<vector<int>, int>> &XX, int j) {
+void f(vector<pair<vector<int>, int>> &XX, int j) { // ф-ция приспособленности
 	vector<int> v(k, 0);
 	for (size_t i = 0; i < n; i++)
 	{
@@ -102,15 +102,12 @@ void f(vector<pair<vector<int>, int>> &XX, int j) {
 	}
 }
 
-bool comp_(const pair<vector<int>, int> &m1, const pair<vector<int>, int> &m2) {
+bool comp_(const pair<vector<int>, int> &m1, const pair<vector<int>, int> &m2) { //сравнивает ф-ции приспособленности
 	return m1.second < m2.second;
 }
 
-void sort_pool2(vector<vector<int>> &pool, int pool_len) {
-	sort(pool.begin(), pool.end(), comp);
-}
 
-void sort_pool(vector<vector<int>> &pool, int pool_len) {
+void sort_pool(vector<vector<int>> &pool, int pool_len) { //ранжирование по ф-ции приспособленности в 1 поток
 	vector<pair<vector<int>, int>> XX(pool_len);
 	for (int i = 0; i < pool_len; i++)
 	{
@@ -128,7 +125,7 @@ void sort_pool(vector<vector<int>> &pool, int pool_len) {
 	cout << XX[0].second << " ";
 }
 
-vector<int> genetic_alg(vector<vector<int>> &pool, int pool_len, int generations) {
+vector<int> genetic_alg(vector<vector<int>> &pool, int pool_len, int generations) { //однопоточный вар-т
 	for (int i = 0; i < generations; i++)
 	{
 		pool_mutation(pool, pool_len);
@@ -179,16 +176,6 @@ void parallel_pool_mutation(vector<vector<int>> &pool, int pool_len) {
 	}
 }
 
-void parallel_pool_mutation2(vector<vector<int>> &pool, int pool_len) {
-#pragma omp parallel shared(pool) num_threads(1)
-	{
-#pragma parallel for
-		for (auto& ind : pool)
-		{
-			individual_mutation(ind);
-		}
-	}
-}
 
 void parallel_sort_pool(vector<vector<int>> &pool, int pool_len) {
 	vector<pair<vector<int>, int>> XX(pool_len);
@@ -214,36 +201,14 @@ void parallel_sort_pool(vector<vector<int>> &pool, int pool_len) {
 	{
 		pool[i] = XX[i].first;
 	}
-	cout << XX[0].second << "\n";
-}
-
-void parallel_sort_pool2(vector<vector<int>> &pool, int pool_len) {
-	vector<pair<vector<int>, int>> XX(pool_len);
-	for (int i = 0; i < pool_len; i++)
-	{
-		XX[i] = { pool[i], 0 };
-	}
-#pragma omp parallel shared(XX) num_threads(4)
-	{
-#pragma parallel for
-		for (int i = 0; i < pool_len; i++)
-		{
-			f(XX, i);
-		}
-	}
-	sort(XX.begin(), XX.end(), comp_);
-	for (int i = 0; i < pool_len; i++)
-	{
-		pool[i] = XX[i].first;
-	}
+	cout << XX[0].second << "\n"; //вывод ф-ции присп. для отслеж. процесса обучения
 }
 
 vector<int> parallel_genetic_alg(vector<vector<int>> pool, int pool_len, int generations) {
 	for (int i = 0; i < generations; i++)
 	{
 		pool_mutation(pool, pool_len);
-		//sort_pool(pool, pool_len);
-		//parallel_pool_mutation(pool, pool_len);
+		//parallel_pool_mutation(pool, pool_len); //дольше обычной
 		parallel_sort_pool(pool, pool_len);
 		get_new_generation(pool, pool_len);
 	}
@@ -264,14 +229,14 @@ int main()
 	srand(1205);
 	//initilization();
 	random_initalization();
-	cout << "количество кучек: \n";
+	cout << "number of subsets: \n";
 	cin >> k;
 	int prog;
-	cout << "Parallel? 0 - no, 1 - yes\n";
+	cout << "parallel? 0 - no, 1 - yes\n";
 	cin >> prog;
 	double start_time = clock();
 	int pool_len = 500;
-	int generations = 35;
+	int generations = 12;
 	vector<vector<int>> pool = vector<vector<int>>(pool_len, vector<int>(n));
 	get_pool(pool, pool_len);
 	vector<int> solution;
